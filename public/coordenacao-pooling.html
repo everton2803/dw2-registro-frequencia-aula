@@ -2,5 +2,24 @@
 <ul id="lista"></ul>
 
 <script>
-    // implementar a lógica 
+    async function atualizar() {
+        const res = await fetch("/diario");
+        const diario = await res.json();
+
+        const dataHoje = new Date().toISOString().split("T")[0];
+        const aula = diario.aulas ? diario.aulas.find(a => a.data === dataHoje) : null;
+
+        const lista = document.getElementById("lista");
+        lista.innerHTML = "";
+
+        if (!aula) return;
+
+        diario.alunos.forEach(aluno => {
+            const status = aula.presencas[aluno.matricula] || "Não marcado";
+            lista.innerHTML += `<li>${aluno.nome} - ${status}</li>`;
+        });
+    }
+
+    setInterval(atualizar, 3000);
+    atualizar();
 </script>
