@@ -20,6 +20,19 @@ function salvar() {
 
 wss.on("connection", ws => {
     // implementar
+    console.log("Cliente conectado");
+
+    ws.on("close", () => {
+        console.log("Cliente desconectado");
+    });
+
+    ws.on("error", err => {
+        console.log("Erro:", err.message);
+    });
+
+  // Envia estado atual ao conectar
+  ws.send(JSON.stringify(diario));
+
 });
 
 function notificar() {
@@ -28,16 +41,62 @@ function notificar() {
     console.log("Clientes Long Polling:", longPollingClients.length);
 
     // implementar
+
+    // Notifica clientes WebSocket
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(diario));
+        }
+    });
+
+    // Responde clientes Long Poll
+    longPollingClients.forEach(res => {
+        try { res.json(diario); } catch (e) {}
+    });
+
+    longPollingClients = []; // Limpa a lista
+
 }
 
 // 🔹 Criar nova aula (data atual)
 app.post("/nova-aula", (req, res) => {
     // implementar
+    const data = new Date()
+    .toISOString().split("T")[0];
+    if (!diario.aulas) diario.aulas = [];
+
+    const aulaExistente = diario.aulas
+    .find(a => a.data === data);
+    if (aulaExistente) {
+        return res.json({ msg: "Já criada" });
+    }
+
+    diario.aulas.push({ data, presencas: {} });
+    salvar();
+    notificar();
+    res.json({ mensagem: "Criada", data });
+
 });
 
 // 🔹 Marcar presença
 app.post("/marcar", (req, res) => {
     // implementar
+    const { matricula, status } = req.body;
+    const data = new Date()
+    .toISOString().split("T")[0];
+
+    let aula = diario.aulas
+    .find(a => a.data === data);
+    if (!aula) {
+        return res.status(400)
+        .json({ erro: "Crie a aula" });
+    }
+
+    aula.presencas[matricula] = status;
+    salvar();
+    notificar();
+    res.json({ ok: true });
+
 });
 
 // 🔹 Buscar dados completos
@@ -48,6 +107,18 @@ app.get("/diario", (req, res) => {
 // 🔹 Long polling
 app.get("/long-poll", (req, res) => {
     // implementar
+    const timeout = setTimeout(() => {
+        res.json({ timeout: true });
+    }, 30000); // 30 segundos
+
+    longPollingClients.push(res);
+
+    req.on("close", () => {
+    clearTimeout(timeout);
+    longPollingClients = 
+        longPollingClients.filter(r => r !== res);
+    });
+
 });
 
 app.get("/aula-atual", (req, res) => {
@@ -67,7 +138,25 @@ app.get("/aulas/:data", (req, res) => {
 });
 
 app.post("/marcar-todos", (req, res) => {
-    // TODO: marcar todos os alunos com o mesmo status
+    const { status } = req.body;
+    const data = new Date().toISOString().split("T")[0];
+
+    let aula = diario.aulas.find(a => a.data === data);
+    if (!aula) {
+        return res.status(400).json({ erro: "Crie a aula" });
+    }
+
+    if (!diario.alunos) {
+        return res.status(400).json({ erro: "Nenhum aluno registrado" });
+    }
+
+    diario.alunos.forEach(aluno => {
+        aula.presencas[aluno.matricula] = status;
+    });
+
+    salvar();
+    notificar();
+    res.json({ ok: true, marcados: diario.alunos.length });
 });
 
 // public/professor.html

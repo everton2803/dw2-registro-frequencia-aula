@@ -1,5 +1,10 @@
-<h2>Coordenação - Polling</h2>
-<ul id="lista"></ul>
+<link rel="stylesheet" href="/styles.css">
+<div class="container">
+    <div class="card">
+        <h2>Coordenação - Polling</h2>
+        <ul id="lista"></ul>
+    </div>
+</div>
 
 <script>
     async function atualizar() {
@@ -16,7 +21,8 @@
 
         diario.alunos.forEach(aluno => {
             const status = aula.presencas[aluno.matricula] || "Não marcado";
-            lista.innerHTML += `<li>${aluno.nome} - ${status}</li>`;
+            const cls = status === 'Presente' ? 'status-present' : status === 'Ausente' ? 'status-absent' : '';
+            lista.innerHTML += `<li class="${cls}">${aluno.nome} - ${status}</li>`;
         });
     }
 

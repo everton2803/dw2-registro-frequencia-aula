@@ -1,6 +1,71 @@
-<h2>Coordenação - Long Polling</h2>
-<ul id="lista"></ul>
+<link rel="stylesheet" href="/styles.css">
+<div class="container">
+    <div class="card">
+        <h2>Coordenação - Long Polling</h2>
+        <ul id="lista"></ul>
+    </div>
+</div>
 
 <script>
-    // implementar a lógica 
+    async function render(diario) {
+        const dataHoje = new Date().toISOString().split("T")[0];
+        const aula = diario.aulas ? diario.aulas.find(a => a.data === dataHoje) : null;
+
+        const lista = document.getElementById("lista");
+        lista.innerHTML = "";
+
+        if (!aula) {
+            lista.innerHTML = "<li>Nenhuma aula hoje</li>";
+            return;
+        }
+
+        diario.alunos.forEach(aluno => {
+            const status = aula.presencas[aluno.matricula] || "Não marcado";
+            const li = document.createElement('li');
+            if (status === 'Presente') li.classList.add('status-present');
+            else if (status === 'Ausente') li.classList.add('status-absent');
+            li.textContent = `${aluno.nome} - ${status}`;
+            lista.appendChild(li);
+        });
+    }
+
+    async function longPoll() {
+        try {
+            const res = await fetch('/long-poll', { cache: 'no-store' });
+            if (!res.ok) throw new Error('Network response was not ok');
+
+            const data = await res.json();
+
+            // servidor pode responder com { timeout: true } quando expirar
+            if (data && data.timeout) {
+                // reconectar imediatamente
+                return longPoll();
+            }
+
+            if (data) {
+                render(data);
+            }
+
+            // reinicia a conexão para receber próximas mudanças
+            return longPoll();
+        } catch (err) {
+            console.error('Erro no long-poll:', err);
+            // espera antes de tentar novamente
+            setTimeout(longPoll, 2000);
+        }
+    }
+
+    // Carrega dados iniciais e depois inicia long polling
+    async function init() {
+        try {
+            const res = await fetch('/diario');
+            const data = await res.json();
+            render(data);
+        } catch (err) {
+            console.error('Erro ao carregar dados iniciais:', err);
+        }
+        longPoll();
+    }
+
+    init();
 </script>

@@ -1,10 +1,17 @@
-<h2>Diário - Professor</h2>
+<link rel="stylesheet" href="/styles.css">
+<div class="container">
+  <div class="card">
+    <h2>Diário - Professor</h2>
 
-<button onclick="novaAula()">Criar Aula de Hoje</button>
-<button onclick="marcarTodos()">Marcar Todos como Presentes</button>
-<button onclick="removerAula()">Remover Aula de Hoje</button>
+    <div class="controls" style="margin:12px 0">
+      <button onclick="novaAula()">Criar Aula de Hoje</button>
+      <button onclick="marcarTodos()" class="secondary">Marcar Todos como Presentes</button>
+      <button onclick="removerAula()" class="secondary">Remover Aula de Hoje</button>
+    </div>
 
-<ul id="lista"></ul>
+    <ul id="lista"></ul>
+  </div>
+</div>
 
 <script>
   async function carregar() {
@@ -19,12 +26,15 @@
 
     diario.alunos.forEach(aluno => {
       const status = aula?.presencas[aluno.matricula] || "Não marcado";
+      const statusClass = status === 'Presente' ? 'status-present' : status === 'Ausente' ? 'status-absent' : '';
 
       lista.innerHTML += `
-      <li>
-        ${aluno.nome} - <b>${status}</b>
-        <button onclick="marcar('${aluno.matricula}','Presente')">Presente</button>
-        <button onclick="marcar('${aluno.matricula}','Ausente')">Ausente</button>
+      <li class="${statusClass}">
+        <span>${aluno.nome} - <b>${status}</b></span>
+        <span>
+          <button class="btn-present" onclick="marcar('${aluno.matricula}','Presente')">Presente</button>
+          <button class="btn-absent" onclick="marcar('${aluno.matricula}','Ausente')">Ausente</button>
+        </span>
       </li>
     `;
     });

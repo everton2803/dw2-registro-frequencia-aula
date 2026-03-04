@@ -1,6 +1,95 @@
-<h2>Coordenação - WebSocket</h2>
-<ul id="lista"></ul>
+<link rel="stylesheet" href="/styles.css">
+<div class="container">
+    <div class="card">
+        <h2>Coordenação - WebSocket</h2>
+        <div class="controls" style="margin-bottom:8px">
+            <button id="btnConnect">Conectar</button>
+            <button id="btnDisconnect" disabled class="secondary">Desconectar</button>
+            <span id="status" class="status-badge status-disconnected">Desconectado</span>
+        </div>
+        <ul id="lista"></ul>
+    </div>
+</div>
 
 <script>
-    // implementar a lógica 
+    function render(diario) {
+        const dataHoje = new Date().toISOString().split("T")[0];
+        const aula = diario.aulas ? diario.aulas.find(a => a.data === dataHoje) : null;
+
+        const lista = document.getElementById("lista");
+        lista.innerHTML = "";
+
+        if (!aula) {
+            lista.innerHTML = "<li>Nenhuma aula hoje</li>";
+            return;
+        }
+
+        diario.alunos.forEach(aluno => {
+            const status = aula.presencas[aluno.matricula] || "Não marcado";
+            const li = document.createElement('li');
+            if (status === 'Presente') li.classList.add('status-present');
+            else if (status === 'Ausente') li.classList.add('status-absent');
+            li.textContent = `${aluno.nome} - ${status}`;
+            lista.appendChild(li);
+        });
+    }
+
+    let ws = null;
+    const btnConnect = document.getElementById('btnConnect');
+    const btnDisconnect = document.getElementById('btnDisconnect');
+    const statusEl = document.getElementById('status');
+
+    function setStatus(text, color) {
+        statusEl.textContent = text;
+        statusEl.style.color = color;
+        const connected = text === 'Conectado';
+        btnConnect.disabled = connected;
+        btnDisconnect.disabled = !connected;
+    }
+
+    function connect() {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+
+        setStatus('Conectando...', 'orange');
+
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(proto + '://' + location.host);
+
+        ws.onopen = () => {
+            console.log('WebSocket conectado');
+            setStatus('Conectado', 'green');
+        };
+
+        ws.onmessage = (evt) => {
+            try {
+                const data = JSON.parse(evt.data);
+                render(data);
+            } catch (e) {
+                console.error('Erro ao parsear mensagem WS', e);
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket fechado');
+            ws = null;
+            setStatus('Desconectado', 'red');
+        };
+
+        ws.onerror = (err) => {
+            console.error('Erro WebSocket', err);
+            setStatus('Erro', 'red');
+            if (ws) ws.close();
+        };
+    }
+
+    function disconnect() {
+        if (!ws) return;
+        ws.close();
+        ws = null;
+        setStatus('Desconectado', 'red');
+    }
+
+    btnConnect.addEventListener('click', connect);
+    btnDisconnect.addEventListener('click', disconnect);
+    setStatus('Desconectado', 'red');
 </script>
