@@ -1,0 +1,18 @@
+FROM node:25-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+
+EXPOSE 3000
+
+CMD [ "npm", "run", "dev" ]
+
+# Para construir a imagem, use o comando:
+# docker build -t chamadas-dev -f Dockerfile.dev .
+
+# Para rodar o container, use o comando:
+# docker run -d -p 3000:3000 -v $(pwd):/app chamadas-dev
