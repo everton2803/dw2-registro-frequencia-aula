@@ -1,0 +1,21 @@
+# Estagio 1 - Builder
+# AS bulder: Define a imagem base para a fase de construção
+FROM node:25-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+# only=production: Instala apenas as dependências de produção, ignorando as devDependencies
+RUN npm ci --only=production
+COPY . .
+
+# Estagio 2 - Runtime
+FROM node:25-alpine
+WORKDIR /app
+# Cria grupo e usuário para rodar a aplicação com menos privilégios
+RUN addgroup -g 1001  -S nodejs
+RUN adduser -S nodejs -u 1001
+# Copia arquivos do estágio de builder
+COPY --from=builder /app ./
+
+USER nodejs
+EXPOSE 3000
+CMD [ "npm", "start" ]
